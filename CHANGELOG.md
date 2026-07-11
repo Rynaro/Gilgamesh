@@ -4,6 +4,55 @@ All notable changes to Gilgamesh are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-07-11
+
+`in_construction` — anchor-precision: mandatory pre-emit anchor re-read (quoted
+fragment must be present at the cited line) + repo-only anchor rule; closes the
+sole residual Arm-1 failure mode measured in gate attempt 5 (100/73/67, misses
+pass³ on anchor drift).
+
+Attempt 5 was the first valid v0.2.0 measurement (prior attempts were discarded —
+spend-limit and grader defects, not methodology defects). Under a faithful
+grader it scored 100% / 73.3% / 66.7% verified-completion — mean exactly 80%,
+but two of three runs land below the 80% pass³ floor. Every residual failure
+across all three runs is a single class: an `EVIDENCE-<key>:` or
+`PROPOSAL-TARGET:` anchor citing a `path:line` where the line doesn't resolve
+(right file, wrong/empty/out-of-range line), plus one case citing an ephemeral
+command-output path (`/tmp/tbc_out.txt:2`) instead of a repo file. Run 1 resolved
+every anchor cleanly, so the discipline is achievable — v0.2.0's quoted-anchor
+rule (cite a verbatim fragment) was necessary but not sufficient: an agent can
+copy a fragment at write-time and still have it drift off the cited line by
+report-assembly time, or cite a scratch file instead of the repo source it came
+from.
+
+### Fixed
+
+- **Pre-emit anchor re-read rule (mechanical, not exhortative).** Before writing
+  ANY `path:line` anchor into the final report, Gilgamesh now MUST Read that
+  exact line number in that file and confirm the line's text contains the
+  verbatim fragment being quoted. If it does not (drifted, empty, or
+  out-of-range), the anchor is wrong — Grep the fragment and cite the corrected
+  line. An anchor not re-read at that exact line in this same mission is
+  inadmissible, the Excalipoor rule applied to line numbers: a citation you
+  cannot re-read is a fake blade.
+- **Repo-only anchor rule.** `EVIDENCE-<key>` and `PROPOSAL-TARGET` anchors now
+  MUST resolve to a repo-relative path that exists in the working checkout —
+  never an ephemeral, temp, sandbox-scratch, or command-output path (`/tmp/*`,
+  redirected stdout, etc.). A fact produced by running a command is recorded on
+  its `VERIFY-<name>` line; the anchor instead cites the repo file or script the
+  fact derives from.
+- Both rules are embedded verbatim in every surface the eval harness actually
+  loads, per the v0.1.1→v0.2.0 forensic lesson: the `.claude/agents/gilgamesh.md`
+  heredoc body in `install.sh`, and `agent.md`'s P0 section (which stays within
+  its token budget — 901 tokens, trimmed elsewhere to make room). `skills/
+  attest.md` and `skills/grind.md` carry the same two rules in full detail as
+  the deep on-demand reference; `SPEC.md` and `hosts/claude-code.md` document
+  them.
+
+No schema, cycle phase, stopping-policy state, or capability-authority row
+changed. Still gated on a re-run of the two-arm measurement gate before any
+`shipped` flip.
+
 ## [0.2.0] — 2026-07-11
 
 `in_construction` — concentrate mechanical attestation discipline into host-loaded
@@ -126,6 +175,7 @@ go/no-go.
 - `writes_repo: false` (real tree — the parent commits); `reads_network: false`;
   `persists: []` (no permanent memory — the wanderer leaves with no weapons).
 
+[0.3.0]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.2.0
 [0.1.1]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.1.0

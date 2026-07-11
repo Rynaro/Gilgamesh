@@ -56,6 +56,13 @@ Success is silent (record the green outcome, move on); failure is verbose (captu
 Never self-critique, never LLM-as-judge. One green external signal per deliverable is
 the pre-completion gate; no result reaches PROPOSE without it.
 
+**An oracle's output is a `VERIFY-<name>` result, never an evidence anchor.** A
+command's stdout/stderr — including anything written to an ephemeral path like
+`/tmp/*` — proves a claim at Attest time via the `VERIFY-<name>` line, not via a
+`path:line` anchor. `EVIDENCE-<key>`/`PROPOSAL-TARGET` anchors resolve only to a
+committed repo file (the source or script the fact derives from); a command-output
+path is never a legal anchor target (`skills/attest.md` — repo-only anchor rule).
+
 ### Route around tool-surface gaps — never route around the oracle itself (verify-routing ladder)
 
 Your tool allowlist is scoped narrower than the repo's full verification surface by

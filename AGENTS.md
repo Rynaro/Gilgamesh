@@ -1,8 +1,8 @@
 ---
 name: gilgamesh
-version: 0.2.0
+version: 0.3.0
 methodology: GILGAMESH
-methodology_version: 0.2.0
+methodology_version: 0.3.0
 role: generalist — bounded-authority, specialist-preferring fallthrough worker; runs a single verifier-gated mission and returns an evidence-anchored result
 handoffs:
   upstream: [orchestrator]

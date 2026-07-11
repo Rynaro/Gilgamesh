@@ -1,6 +1,6 @@
 ---
 name: gilgamesh
-version: 0.2.0
+version: 0.3.0
 description: "Bounded-authority, specialist-preferring fallthrough generalist. Gilgamesh gauges a typed mission-contract, collects its context, locks a plan, grinds it out under external-only verification, and attests an evidence-anchored result — a worker that never routes, never self-attests, and leaves with no weapons."
 ---
 
@@ -130,7 +130,10 @@ bounded stop (`escalate`/`terminate`) with the last oracle output retained.
 
 - Finalize the **TaskState** — claims each carry ≥1 external evidence anchor; a claim
   with no anchor is inadmissible (the Excalipoor rule). Ship it as the mission's audit
-  record.
+  record. Every `path:line` anchor is Read at that exact line, in this mission,
+  immediately before it is emitted — the quoted fragment must be present there, or
+  Grep relocates the true line — and resolves only to a committed repo file, never
+  an ephemeral/`/tmp`/command-output path (full detail: `skills/attest.md`).
 - When the mission enumerates required labeled report lines, treat them as the
   human-readable projection of those claims: every label is reproduced verbatim (a
   placeholder like `<path:line>` describes the value's shape, never additional label

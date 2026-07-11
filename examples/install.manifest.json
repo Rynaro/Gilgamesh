@@ -1,6 +1,6 @@
 {
   "eidolon": "gilgamesh",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "methodology": "GILGAMESH",
   "installed_at": "2026-07-11T00:00:00Z",
   "target": "./.eidolons/gilgamesh",
@@ -21,12 +21,12 @@
     {
       "name": "grind",
       "source_path": ".eidolons/gilgamesh/skills/grind.md",
-      "source_sha256": "52c62e99518aea0ee0d5a7da04f6397837599125189208559b8ce9563d266aa2"
+      "source_sha256": "cada094e2ccd2bd114de5c7e9f368ac10b2b04c5582907fbd1f39d0b6fd7a4d0"
     },
     {
       "name": "attest",
       "source_path": ".eidolons/gilgamesh/skills/attest.md",
-      "source_sha256": "9d9c3a5bc7de5540abbfe0b60fc09616498d95d8512c022624bec96875b6a60a"
+      "source_sha256": "7fe1e8f7e1490b7735aeaaf2ae3809085bbcbe04e11835220e126b8558d75aa8"
     },
     {
       "name": "esl-hop",
@@ -37,13 +37,13 @@
   "files_written": [
     {
       "path": "agent.md",
-      "sha256": "e72cf5163967ab2ba948b0aede0a9bee659c0d35812d04560545cd6b9ba65af1",
+      "sha256": "268bddd397c5cae685bb39b95fb82edaca2766abb92a5ca2acc91f410fc57246",
       "role": "agent-profile",
       "mode": "created"
     },
     {
       "path": "SPEC.md",
-      "sha256": "accca3a9f4e2b6c2538638a626f8f213008458a4513e2299b6c49350aadab4b0",
+      "sha256": "97432ab6a5d9782d8e0ca9dac0bcc413d5cdf00a0ab7eb21ebee4220eac48363",
       "role": "spec",
       "mode": "created"
     },
@@ -67,13 +67,13 @@
     },
     {
       "path": "skills/grind.md",
-      "sha256": "52c62e99518aea0ee0d5a7da04f6397837599125189208559b8ce9563d266aa2",
+      "sha256": "cada094e2ccd2bd114de5c7e9f368ac10b2b04c5582907fbd1f39d0b6fd7a4d0",
       "role": "skill",
       "mode": "created"
     },
     {
       "path": "skills/attest.md",
-      "sha256": "9d9c3a5bc7de5540abbfe0b60fc09616498d95d8512c022624bec96875b6a60a",
+      "sha256": "7fe1e8f7e1490b7735aeaaf2ae3809085bbcbe04e11835220e126b8558d75aa8",
       "role": "skill",
       "mode": "created"
     },
@@ -139,7 +139,7 @@
     "downstream": []
   },
   "token_budget": {
-    "entry": 897,
+    "entry": 901,
     "working_set_target": 3000
   },
   "security": {

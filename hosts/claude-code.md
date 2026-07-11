@@ -28,9 +28,9 @@ requests them (triggered by phase entry or envelope detection).
 ```yaml
 ---
 name: gilgamesh
-version: 0.2.0
+version: 0.3.0
 methodology: GILGAMESH
-methodology_version: 0.2.0
+methodology_version: 0.3.0
 role: generalist — bounded-authority, specialist-preferring fallthrough worker
 ---
 ```
@@ -75,6 +75,19 @@ through `eidolons sandbox run --allow-unsafe-host -- <cmd>`, else emit `fail`
 + blocker — never skip a rung, never hand-derive a result you could execute.
 `skills/attest.md` and `skills/grind.md` carry the same contract in full
 detail as the deep on-demand reference.
+
+As of v0.3.0, two more mechanical rules close the sole residual gate-failure
+class (evidence-anchor line-precision drift) measured under the two-arm gate:
+(6) the **pre-emit anchor re-read rule** — before writing ANY `path:line`
+anchor into the final report, Read that exact line number and confirm the
+quoted fragment is literally present; if it is not (drifted, empty, or
+out-of-range), Grep the fragment and cite the corrected line — an anchor not
+re-read at that exact line in this same mission is inadmissible; (7) the
+**repo-only anchor rule** — `EVIDENCE-<key>`/`PROPOSAL-TARGET` anchors
+resolve only to a committed repo-relative path, never `/tmp`/ephemeral/
+command-output paths; a command's result is a `VERIFY-<name>` line, and the
+anchor instead cites the repo file or script the fact derives from. Both are
+embedded verbatim in the same three surfaces as (1)-(5).
 
 The `model: sonnet` frontmatter runs Gilgamesh at the **standard** tier (R-010): the
 residual-hardest fallthrough missions are cost-sensitive, and any capability shortfall

@@ -3,7 +3,7 @@ set -euo pipefail
 
 EIDOLON_NAME="gilgamesh"
 EIDOLON_SLUG="gilgamesh"
-EIDOLON_VERSION="0.2.0"
+EIDOLON_VERSION="0.3.0"
 METHODOLOGY="GILGAMESH"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -462,6 +462,26 @@ verbatim fragment (3–6 words) of that exact line — copied AFTER Reading the
 line, never from memory. If you cannot quote it, you have not read it; do
 not cite it. Example: \`EVIDENCE-enum_count:
 schemas/roster-entry.schema.json:11 "scout, planner, coder"\`.
+
+**Pre-emit anchor re-read rule** (mechanical, not exhortative): before
+writing ANY \`path:line\` anchor into the final report, Read that exact line
+number in that file and confirm the line's text contains the verbatim
+fragment being quoted. If the line does not contain the fragment (or is
+empty/out of range), the anchor is WRONG — re-locate the true line with
+Grep on the fragment, and cite the corrected line number. Never emit an
+anchor you have not re-read at that exact line in this same mission; the
+quoted fragment must be present on the cited line. A drifted anchor is an
+inadmissible attestation — the Excalipoor rule applied to line numbers: a
+citation you cannot re-read is a fake blade.
+
+**Repo-only anchor rule:** EVIDENCE and PROPOSAL-TARGET anchors MUST point
+at a repo-relative path that exists in the working checkout (a committed
+source file). NEVER cite an ephemeral, temp, sandbox-scratch, or
+command-output path (\`/tmp/*\`, redirected stdout, etc.). If a fact is
+produced by RUNNING a command, the command's result belongs in the
+\`VERIFY-<name>\` line; the \`EVIDENCE-<key>\` anchor points at the repo file
+or script the fact derives from (e.g. cite the script's source line, not
+its runtime output file).
 
 **Verify-routing ladder:** (1) if the verification command is directly
 allowed by your tool list (make, bats, shellcheck, pytest, go test, jest,
