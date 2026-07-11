@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  bats:
+    name: bats + shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck install.sh
+        run: shellcheck -x -S error install.sh
+
+      - name: Install bats-core (pinned v1.13.0)
+        run: |
+          git clone --depth 1 --branch v1.13.0 \
+            https://github.com/bats-core/bats-core.git /tmp/bats
+
+      - name: Run bats suite
+        run: /tmp/bats/bin/bats tests/
+
+  eiis-conformance:
+    name: EIIS conformance (exit 0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Clone EIIS at the pinned tag
+        run: |
+          git clone --depth 1 --branch v1.4.0 \
+            https://github.com/Rynaro/eidolons-eiis.git /tmp/eiis || \
+          git clone --depth 1 \
+            https://github.com/Rynaro/eidolons-eiis.git /tmp/eiis
+
+      - name: Run EIIS conformance checker
+        run: |
+          bash /tmp/eiis/conformance/check.sh .
+          echo "conformance exit: $?"
