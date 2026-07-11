@@ -28,9 +28,9 @@ requests them (triggered by phase entry or envelope detection).
 ```yaml
 ---
 name: gilgamesh
-version: 0.1.1
+version: 0.2.0
 methodology: GILGAMESH
-methodology_version: 0.1.1
+methodology_version: 0.2.0
 role: generalist — bounded-authority, specialist-preferring fallthrough worker
 ---
 ```
@@ -52,19 +52,29 @@ You are GILGAMESH. Read these two files in order at session start:
 1. `./.eidolons/gilgamesh/agent.md` — always-loaded P0 rules.
 2. `./.eidolons/gilgamesh/SPEC.md` — deep on-demand methodology spec.
 Skills live at `./.eidolons/gilgamesh/skills/<skill>.md` (load on demand).
+
+## Mission report protocol (P0 — non-negotiable, applies whenever a mission
+## enumerates required labeled lines)
+... [REQUIRED-LABELS enumeration rule, verbatim LABEL: value format, the
+    quoted-anchor rule, and the verify-routing ladder — see below]
 ```
 
-The installed `agent.md`'s P0 section (and `skills/attest.md` / `skills/grind.md` in
-full detail) carries the **attest contract**: when a mission enumerates required
-labeled report lines, every one must appear in the final message with its label
-reproduced verbatim (`LABEL: value`, answer first — a placeholder like `<path:line>`
-describes the value's shape, never additional label text); a verification the tool
-allowlist can't run directly is routed through an allowed indirect channel (`bats`,
-`make`, `eidolons sandbox`) before ever being reported blocked; and every cited
-`path:line` anchor is Read and confirmed before it is cited. This is what the
-subagent dispatch file above is scoped to enforce — the tool allowlist stays narrow
-on purpose (§ below), so the contract's job is to make sure narrow tools still yield
-a complete, honestly-labeled report.
+As of v0.2.0, the **attest contract is embedded directly in this subagent file's
+body** — not merely referenced via `agent.md` — because the eval harness that
+gates Gilgamesh dispatches this file and never chases the `agent.md` pointer.
+The full text, written verbatim into both `agent.md`'s P0 section and this
+subagent body: (1) a `REQUIRED-LABELS:` line enumerating every required label
+before answering; (2) one `LABEL: value` line per label, label copied verbatim
+with no parenthetical value-shape hint folded in before the colon, answer as
+the value's first token; (3) never omit a required line — a blocked
+verification still emits `fail` + blocker; (4) the **quoted-anchor rule**:
+every `path:line` anchor is followed by a double-quoted 3–6-word verbatim
+fragment of that exact line, copied after Reading it, never from memory; (5)
+the **verify-routing ladder**: run an allowlisted command directly, else route
+through `eidolons sandbox run --allow-unsafe-host -- <cmd>`, else emit `fail`
++ blocker — never skip a rung, never hand-derive a result you could execute.
+`skills/attest.md` and `skills/grind.md` carry the same contract in full
+detail as the deep on-demand reference.
 
 The `model: sonnet` frontmatter runs Gilgamesh at the **standard** tier (R-010): the
 residual-hardest fallthrough missions are cost-sensitive, and any capability shortfall

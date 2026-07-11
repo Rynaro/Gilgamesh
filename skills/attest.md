@@ -33,39 +33,49 @@ artefact; ship it verbatim.
 
 ---
 
-## Step 1a — The report is the attestation (required-lines contract)
+## Step 1a — The report is the attestation (mission report protocol)
 
 When the inbound mission enumerates required labeled report lines, your final
 human-readable message is itself part of the audit record, not a separate courtesy
-summary. A report missing any required line is an **inadmissible attestation** — the
-same Excalipoor rule as an anchor-less claim applies to an omitted line.
+summary. A report missing any required line — or one that skips enumeration — is an
+**inadmissible attestation**, the same Excalipoor rule an anchor-less claim fails.
 
-**Before emitting:** RE-READ the mission, list every required label, and check each
-one off against your draft. Do this even under budget pressure — a terse-but-complete
-report beats a longer one that drops a required line.
+**1. Enumerate first.** The FIRST line of the final report is `REQUIRED-LABELS:`
+followed by every required label copied from the mission. RE-READ the mission and
+build this line before drafting any answer — a report that skips enumeration is
+invalid regardless of what follows. Do this even under budget pressure.
 
-**Label discipline.** Reproduce each label **exactly** as the mission gives it, one
-per line, as `LABEL: value`. A placeholder shown after the label (e.g. `<path:line>`,
-`(pass/fail)`) describes the **shape of the value** — it is not additional label text.
-Never insert it, or any other parenthetical, between the label and its colon; that
-turns a matched line into an unmatched one under mechanical grading.
+**2. Label discipline.** Then one line per label, `LABEL: value`. Reproduce each
+label **exactly** as the mission gives it, VERBATIM but WITHOUT any parenthetical
+hint: in `EVIDENCE-x (path:line)` the `(path:line)` describes the **value's shape**
+and is never part of the label. Write `EVIDENCE-x: <path>:<line>`. Folding the
+hint into the label turns a matched line into an unmatched one under mechanical
+grading.
 
-**Value format.** The value's first whitespace-delimited token must **be** the
-answer — a number, `pass`/`fail`, or a `path:line` — with any annotation trailing
+**3. Value format.** The value's FIRST whitespace-delimited token IS the answer —
+a number, `pass`/`fail`, or a `path:line` — with explanatory annotation trailing
 after a space. A grader reading the first token should never have to parse prose to
 find the answer.
 
-**Anchor discipline.** Cite only `path:line` anchors you have Read and confirmed
-resolve to the claimed content; prefer a single line over a range. An anchor you
-have not re-checked against the current file is a guess, not evidence.
+**4. Never omit a line.** If a verification is blocked, its line is still emitted
+with value `fail` plus the blocker as annotation — never a missing line, and never
+a `pass` you did not actually observe.
 
-**Verify routing.** If a required verification line names a check your tool
-allowlist cannot run directly, do not treat that as a dead end and do not silently
-substitute manual reasoning for an oracle's exit code. Look for an **allowed indirect
-route** first (see `skills/grind.md` — externalized verification). Only when no
-allowed route reaches the oracle does the line get `VERIFY-<x>: fail`, immediately
-followed by the blocker — never a missing line, and never a `pass` you did not
-actually observe.
+**Quoted-anchor rule (Excalipoor applied to citations).** Every `path:line` anchor
+you emit must be followed by a space and a short double-quoted verbatim fragment
+(3–6 words) of that exact line — copied AFTER Reading the line, never from memory.
+If you cannot quote it, you have not read it; do not cite it. Example:
+`EVIDENCE-enum_count: schemas/roster-entry.schema.json:11 "scout, planner, coder"`.
+Prefer a single line over a range.
+
+**Verify-routing ladder.** (1) If the verification command is directly allowed by
+your tool list (`make`, `bats`, `shellcheck`, `pytest`, `go test`, `jest`, `rspec`,
+`shasum`, `wc`) — run it directly. (2) Otherwise route it through the delegated
+sandbox: `eidolons sandbox run --allow-unsafe-host -- <cmd>` (see `skills/grind.md`
+— externalized verification; the sandbox captures pass/fail). (3) Only if both
+rungs are unavailable, emit `VERIFY-<x>: fail` immediately followed by the
+blocker. Never skip a rung, never omit the line, never hand-derive a result you
+could execute.
 
 ---
 

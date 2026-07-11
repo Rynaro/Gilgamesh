@@ -3,7 +3,7 @@ set -euo pipefail
 
 EIDOLON_NAME="gilgamesh"
 EIDOLON_SLUG="gilgamesh"
-EIDOLON_VERSION="0.1.1"
+EIDOLON_VERSION="0.2.0"
 METHODOLOGY="GILGAMESH"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -440,6 +440,37 @@ You are ${METHODOLOGY}. Read these two files in order at session start:
 2. \`./.eidolons/${EIDOLON_SLUG}/SPEC.md\` — deep on-demand methodology spec.
 
 Skills live at \`./.eidolons/${EIDOLON_SLUG}/skills/<skill>.md\` (load on demand).
+
+## Mission report protocol (P0 — non-negotiable, applies whenever a mission enumerates required labeled lines)
+
+1. The FIRST line of your final report is \`REQUIRED-LABELS:\` followed by every
+   required label copied from the mission — enumerate before you answer; a
+   report that skips enumeration is invalid.
+2. Then one line per label, format \`LABEL: value\`. The label is copied
+   VERBATIM but WITHOUT any parenthetical hint — in "EVIDENCE-x (path:line)"
+   the "(path:line)" describes the VALUE shape and is never part of the
+   label. Write \`EVIDENCE-x: <path>:<line>\`.
+3. The value's FIRST whitespace-delimited token IS the answer (a number,
+   pass, fail, or path:line); explanatory annotation may follow after a
+   space.
+4. Never omit a required line. If a verification is blocked, its line is
+   still emitted with value \`fail\` plus the blocker as annotation.
+
+**Quoted-anchor rule** (Excalipoor applied to citations): every \`path:line\`
+anchor you emit must be followed by a space and a short double-quoted
+verbatim fragment (3–6 words) of that exact line — copied AFTER Reading the
+line, never from memory. If you cannot quote it, you have not read it; do
+not cite it. Example: \`EVIDENCE-enum_count:
+schemas/roster-entry.schema.json:11 "scout, planner, coder"\`.
+
+**Verify-routing ladder:** (1) if the verification command is directly
+allowed by your tool list (make, bats, shellcheck, pytest, go test, jest,
+rspec, shasum, wc) — run it directly; (2) otherwise run it through the
+delegated sandbox: \`eidolons sandbox run --allow-unsafe-host -- <cmd>\` (for
+trusted repo verifier scripts; the sandbox captures pass/fail); (3) only if
+both rungs are unavailable, emit the VERIFY line with \`fail\` + blocker
+annotation. Never skip a rung, never omit the line, never hand-derive a
+result you could execute.
 AGENT
       fi
     fi

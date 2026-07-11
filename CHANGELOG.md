@@ -4,6 +4,41 @@ All notable changes to Gilgamesh are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-07-11
+
+`in_construction` — concentrate mechanical attestation discipline into host-loaded
+surfaces; forensics showed v0.1.1 landed only in non-loaded skill files. The v0.1.1
+remediation text was correct but misplaced: `skills/attest.md` and `skills/grind.md`
+are on-demand deep references the P4 gate harness never loads, and the Claude Code
+subagent dispatch file `install.sh` writes to `.claude/agents/gilgamesh.md` only
+pointed at `agent.md`/`SPEC.md` by reference rather than carrying the contract
+itself. The gate failed a second time on the same defect class.
+
+### Fixed
+
+- **Contract now lives verbatim in every surface the harness actually loads.** The
+  `.claude/agents/gilgamesh.md` heredoc in `install.sh` now embeds the full mission
+  report protocol directly in its body — the `REQUIRED-LABELS:` enumeration rule,
+  the verbatim `LABEL: value` format, the quoted-anchor rule, and the three-rung
+  verify-routing ladder — rather than only referencing `agent.md`. Frontmatter
+  (`name`/`description`/`model`/`tools`/`x-eidolons-mcp-wired`) is unchanged.
+  `agent.md`'s P0 section carries the same contract, tightened to stay within its
+  existing token budget (897 tokens, unchanged).
+- **Quoted-anchor rule made mechanical.** Every cited `path:line` anchor must now be
+  followed by a short double-quoted verbatim fragment (3–6 words) of that exact
+  line, copied after Reading it — closing the gap where an anchor could be cited
+  without having actually been read.
+- **Verify-routing ladder made explicit and numbered.** (1) run an allowlisted
+  command directly; (2) otherwise route through `eidolons sandbox run
+  --allow-unsafe-host -- <cmd>`; (3) only then emit `fail` + blocker. `skills/
+  attest.md` and `skills/grind.md` now state the same three rungs in the same
+  order, so the deep reference and the always-loaded surfaces cannot drift.
+- `hosts/claude-code.md` documents the embedded contract and the updated
+  frontmatter version.
+
+No schema, cycle phase, stopping-policy state, or capability-authority row changed.
+Still gated on a re-run of the two-arm measurement gate before any `shipped` flip.
+
 ## [0.1.1] — 2026-07-11
 
 `in_construction` — gate-fail remediation. Gilgamesh v0.1.0 measured 53.3/33.3/40.0%
@@ -91,5 +126,6 @@ go/no-go.
 - `writes_repo: false` (real tree — the parent commits); `reads_network: false`;
   `persists: []` (no permanent memory — the wanderer leaves with no weapons).
 
+[0.2.0]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.2.0
 [0.1.1]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 {
   "eidolon": "gilgamesh",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "methodology": "GILGAMESH",
   "installed_at": "2026-07-11T00:00:00Z",
   "target": "./.eidolons/gilgamesh",
@@ -139,7 +139,7 @@
     "downstream": []
   },
   "token_budget": {
-    "entry": 898,
+    "entry": 897,
     "working_set_target": 3000
   },
   "security": {
