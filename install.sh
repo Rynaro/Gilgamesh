@@ -3,7 +3,7 @@ set -euo pipefail
 
 EIDOLON_NAME="gilgamesh"
 EIDOLON_SLUG="gilgamesh"
-EIDOLON_VERSION="0.3.0"
+EIDOLON_VERSION="1.0.0"
 METHODOLOGY="GILGAMESH"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

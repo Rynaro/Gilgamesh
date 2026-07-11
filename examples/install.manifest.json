@@ -1,6 +1,6 @@
 {
   "eidolon": "gilgamesh",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "methodology": "GILGAMESH",
   "installed_at": "2026-07-11T00:00:00Z",
   "target": "./.eidolons/gilgamesh",
@@ -37,13 +37,13 @@
   "files_written": [
     {
       "path": "agent.md",
-      "sha256": "268bddd397c5cae685bb39b95fb82edaca2766abb92a5ca2acc91f410fc57246",
+      "sha256": "200e5cedbb46c9541087380c3f53ac1a21f4b40d3ddec44ebe016e5729cd3df7",
       "role": "agent-profile",
       "mode": "created"
     },
     {
       "path": "SPEC.md",
-      "sha256": "97432ab6a5d9782d8e0ca9dac0bcc413d5cdf00a0ab7eb21ebee4220eac48363",
+      "sha256": "6719ec3ff3e30622f396f3d4f3eb4f6d395a61aaac19f46bc47968165bc51717",
       "role": "spec",
       "mode": "created"
     },

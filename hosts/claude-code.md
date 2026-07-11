@@ -28,9 +28,9 @@ requests them (triggered by phase entry or envelope detection).
 ```yaml
 ---
 name: gilgamesh
-version: 0.3.0
+version: 1.0.0
 methodology: GILGAMESH
-methodology_version: 0.3.0
+methodology_version: 1.0.0
 role: generalist — bounded-authority, specialist-preferring fallthrough worker
 ---
 ```

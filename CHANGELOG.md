@@ -4,6 +4,13 @@ All notable changes to Gilgamesh are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] — 2026-07-11
+
+Shipped release. Methodology identical to 0.3.0; promoted to 1.0.0 after clearing
+the generalist-eidolon two-arm measurement gate (Arm-1 pass³ 93.3/93.3/100.0,
+Arm-2 0 over-capture, independently attested) — status `in_construction` →
+`shipped`.
+
 ## [0.3.0] — 2026-07-11
 
 `in_construction` — anchor-precision: mandatory pre-emit anchor re-read (quoted
@@ -175,6 +182,7 @@ go/no-go.
 - `writes_repo: false` (real tree — the parent commits); `reads_network: false`;
   `persists: []` (no permanent memory — the wanderer leaves with no weapons).
 
+[1.0.0]: https://github.com/Rynaro/Gilgamesh/releases/tag/v1.0.0
 [0.3.0]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.2.0
 [0.1.1]: https://github.com/Rynaro/Gilgamesh/releases/tag/v0.1.1

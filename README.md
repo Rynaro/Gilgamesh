@@ -120,9 +120,9 @@ Gilgamesh/
 
 ## Status
 
-`v0.3.0` — `in_construction`. Gilgamesh is being brought up under ESL change
-`generalist-eidolon`; the `shipped` flip is gated on the two-arm measurement gate and a
-human go/no-go. Do not rely on Gilgamesh in a production pipeline before that gate.
+`v1.0.0` — `shipped`. Gilgamesh cleared the two-arm measurement gate under ESL change
+`generalist-eidolon` (Arm-1 pass³ 93.3/93.3/100.0, Arm-2 zero over-capture,
+independently attested) and the human go/no-go; promoted from `in_construction`.
 
 ---
 
