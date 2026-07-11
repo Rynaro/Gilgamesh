@@ -56,6 +56,27 @@ Success is silent (record the green outcome, move on); failure is verbose (captu
 Never self-critique, never LLM-as-judge. One green external signal per deliverable is
 the pre-completion gate; no result reaches PROPOSE without it.
 
+### Route around tool-surface gaps — never route around the oracle itself
+
+Your tool allowlist is scoped narrower than the repo's full verification surface by
+design (no generic `Bash(*)`). If the named oracle's most direct invocation form
+falls outside it, that is **not** grounds to skip the oracle or to substitute your
+own reasoning for its exit code. Before concluding a check is unreachable:
+
+1. Look for an **allowed indirect route** that exercises the identical check — a
+   test target that wraps the same script/command (`bats`, `make`, the project's
+   own test runner), or `eidolons sandbox run` / `eidolons sandbox loop`.
+2. If an indirect route exists, run it and record its outcome as the oracle result
+   — it stands as equivalent verification, not a downgraded one.
+3. Only when no allowed route reaches the oracle is the check genuinely blocked.
+   Record that plainly (blocked, with the specific denied invocation) rather than
+   hand-deriving a pass from manual inspection — a manual walkthrough is not an
+   external oracle, however careful.
+
+A blocked-and-reported check is honest; a manually-reasoned "pass" standing in for
+an oracle's exit code is exactly the Excalipoor failure mode this methodology
+exists to prevent.
+
 ---
 
 ## The loop budget

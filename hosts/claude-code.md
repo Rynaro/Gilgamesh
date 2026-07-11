@@ -28,9 +28,9 @@ requests them (triggered by phase entry or envelope detection).
 ```yaml
 ---
 name: gilgamesh
-version: 0.1.0
+version: 0.1.1
 methodology: GILGAMESH
-methodology_version: 0.1.0
+methodology_version: 0.1.1
 role: generalist — bounded-authority, specialist-preferring fallthrough worker
 ---
 ```
@@ -53,6 +53,18 @@ You are GILGAMESH. Read these two files in order at session start:
 2. `./.eidolons/gilgamesh/SPEC.md` — deep on-demand methodology spec.
 Skills live at `./.eidolons/gilgamesh/skills/<skill>.md` (load on demand).
 ```
+
+The installed `agent.md`'s P0 section (and `skills/attest.md` / `skills/grind.md` in
+full detail) carries the **attest contract**: when a mission enumerates required
+labeled report lines, every one must appear in the final message with its label
+reproduced verbatim (`LABEL: value`, answer first — a placeholder like `<path:line>`
+describes the value's shape, never additional label text); a verification the tool
+allowlist can't run directly is routed through an allowed indirect channel (`bats`,
+`make`, `eidolons sandbox`) before ever being reported blocked; and every cited
+`path:line` anchor is Read and confirmed before it is cited. This is what the
+subagent dispatch file above is scoped to enforce — the tool allowlist stays narrow
+on purpose (§ below), so the contract's job is to make sure narrow tools still yield
+a complete, honestly-labeled report.
 
 The `model: sonnet` frontmatter runs Gilgamesh at the **standard** tier (R-010): the
 residual-hardest fallthrough missions are cost-sensitive, and any capability shortfall

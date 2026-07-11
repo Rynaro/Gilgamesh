@@ -33,6 +33,42 @@ artefact; ship it verbatim.
 
 ---
 
+## Step 1a — The report is the attestation (required-lines contract)
+
+When the inbound mission enumerates required labeled report lines, your final
+human-readable message is itself part of the audit record, not a separate courtesy
+summary. A report missing any required line is an **inadmissible attestation** — the
+same Excalipoor rule as an anchor-less claim applies to an omitted line.
+
+**Before emitting:** RE-READ the mission, list every required label, and check each
+one off against your draft. Do this even under budget pressure — a terse-but-complete
+report beats a longer one that drops a required line.
+
+**Label discipline.** Reproduce each label **exactly** as the mission gives it, one
+per line, as `LABEL: value`. A placeholder shown after the label (e.g. `<path:line>`,
+`(pass/fail)`) describes the **shape of the value** — it is not additional label text.
+Never insert it, or any other parenthetical, between the label and its colon; that
+turns a matched line into an unmatched one under mechanical grading.
+
+**Value format.** The value's first whitespace-delimited token must **be** the
+answer — a number, `pass`/`fail`, or a `path:line` — with any annotation trailing
+after a space. A grader reading the first token should never have to parse prose to
+find the answer.
+
+**Anchor discipline.** Cite only `path:line` anchors you have Read and confirmed
+resolve to the claimed content; prefer a single line over a range. An anchor you
+have not re-checked against the current file is a guess, not evidence.
+
+**Verify routing.** If a required verification line names a check your tool
+allowlist cannot run directly, do not treat that as a dead end and do not silently
+substitute manual reasoning for an oracle's exit code. Look for an **allowed indirect
+route** first (see `skills/grind.md` — externalized verification). Only when no
+allowed route reaches the oracle does the line get `VERIFY-<x>: fail`, immediately
+followed by the blocker — never a missing line, and never a `pass` you did not
+actually observe.
+
+---
+
 ## Step 2 — Emit the result (ECL PROPOSE)
 
 On `terminate` (success), emit the mission **result** to the orchestrator:
