@@ -26,7 +26,7 @@ Default install target: `./.eidolons/gilgamesh`. Then wire Claude Code:
 
 ```
 # Add to your project's CLAUDE.md:
-@.eidolons/gilgamesh/agent.md
+@.eidolons/gilgamesh/PERSONA.md
 ```
 
 ## The G→I→L→G→A Cycle
@@ -88,7 +88,7 @@ orchestrator routes; Gilgamesh never spawns.
 ```
 Gilgamesh/
 ├── install.sh                        # Install into any project (EIIS-conformant)
-├── agent.md                          # Always-loaded entry point (≤900 tokens)
+├── PERSONA.md                          # Always-loaded entry point (≤900 tokens)
 ├── SPEC.md                           # Full GILGAMESH methodology specification
 ├── ECL_VERSION                       # 2.0
 ├── EIIS_VERSION                      # 1.4
@@ -115,7 +115,7 @@ Gilgamesh/
 
 ## Standards
 
-- [EIIS v1.4](https://github.com/Rynaro/eidolons-eiis) — install contract
+- [EIIS 3.0](https://github.com/Rynaro/eidolons-eiis) — install contract
 - [ECL v2.0](https://github.com/Rynaro/eidolons-ecl) — communication contract
 
 ## Status
@@ -127,3 +127,17 @@ independently attested) and the human go/no-go; promoted from `in_construction`.
 ---
 
 *Gilgamesh — your blade might be Excalipoor; let the oracle tell you.*
+
+<!-- eiis-v3-package:start -->
+## EIIS v3 package
+
+This repository has the same self-contained package shape as every roster Eidolon:
+
+- `PERSONA.md` — bounded identity, triggers, authority, refusals, and handoffs.
+- `SPEC.md` — the authoritative methodology.
+- `skills/<methodology>/SKILL.md` — unique skill discovery entrypoints.
+- `manifest.json` — immutable package metadata and resource inventory.
+- `install.sh` — package-only installer; the nexus owns vendor adapters.
+
+See [INSTALL.md](INSTALL.md) for nexus and standalone installation.
+<!-- eiis-v3-package:end -->

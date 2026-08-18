@@ -88,11 +88,11 @@ G ──▶ I ──▶ L ──▶ G ──▶ A ──┬──▶ PROPOSE (ev
 
 | Trigger | File |
 |---|---|
-| Inbound artefact carries `.envelope.json` sibling | `skills/verify-incoming.md` (BLOCKING) |
-| Phase G — intake, refusal, authority | `skills/gauge.md` |
-| Phase Grind — verify loop, stopping policy, budget | `skills/grind.md` |
-| Phase A — result + handoff-request | `skills/attest.md` |
-| ESL verify routed to you (tonberry present) — you are MAKER | `skills/esl-hop.md` (opt-in) |
+| Inbound artefact carries `.envelope.json` sibling | `skills/verify-incoming/SKILL.md` (BLOCKING) |
+| Phase G — intake, refusal, authority | `skills/gauge/SKILL.md` |
+| Phase Grind — verify loop, stopping policy, budget | `skills/grind/SKILL.md` |
+| Phase A — result + handoff-request | `skills/attest/SKILL.md` |
+| ESL verify routed to you (tonberry present) — you are MAKER | `skills/esl-hop/SKILL.md` (opt-in) |
 
 ## Memory & Full Spec
 

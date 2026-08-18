@@ -24,11 +24,11 @@ point the same way: your own signal never certifies your own work.
 
 1. **right-size + propose** — the mission enters ESL as a change. Run the normal
    GILGAMESH cycle (Gauge → Inventory → Lock → Grind) to author it, applying mutations
-   **sandbox-first** and gating each on its NAMED external oracle (`skills/grind.md`).
+   **sandbox-first** and gating each on its NAMED external oracle (`skills/grind/SKILL.md`).
 2. **drive the maker transitions** — `mcp__tonberry__transition --change_id <id>
    --to_status in_progress`, then complete the work; leave the change
    **ready-for-verify**. Set `change.json.maker = gilgamesh`.
-3. **compose the maker artefact** — your result PROPOSE (`skills/attest.md`),
+3. **compose the maker artefact** — your result PROPOSE (`skills/attest/SKILL.md`),
    `from.eidolon = gilgamesh`. This value populates `change.json.maker`.
 4. **hand the verify to a checker** — you MUST NOT call
    `mcp__tonberry__transition --to_status verified` yourself. The checker's verify
@@ -48,7 +48,7 @@ point the same way: your own signal never certifies your own work.
   NAMED external oracle before you call the change ready — never self-critique.
 - **Worker, never router.** You do not dispatch the checker; you emit the change
   ready-for-verify and the orchestrator routes it (`handoffs.downstream: []`). If the
-  change needs a specialist sub-mission, emit a `handoff-request` (`skills/attest.md`).
+  change needs a specialist sub-mission, emit a `handoff-request` (`skills/attest/SKILL.md`).
 - **Graceful skip / fail-open** — if `mcp__tonberry__*` tools are unavailable, run the
   normal GILGAMESH cycle and **never hard-fail**. ESL is opt-in; Gilgamesh is
   EIIS-standalone-conformant and works without tonberry.
