@@ -4,6 +4,14 @@ All notable changes to Gilgamesh are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] — 2026-08-18 — Self-contained EIIS v3 package
+
+### Changed
+
+- Adopt the canonical EIIS v3 `PERSONA.md`, `SPEC.md`, and `skills/<methodology>/SKILL.md` package layout.
+- Declare package resources through `manifest.json` and remove duplicated vendor-specific host wiring.
+- Pin package conformance and release validation to EIIS v3.0.0.
+
 ## [1.0.0] — 2026-07-11
 
 Shipped release. Methodology identical to 0.3.0; promoted to 1.0.0 after clearing
