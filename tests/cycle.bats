@@ -17,8 +17,8 @@ load helpers.bash
   [[ "$output" == "true" ]]
 }
 
-@test "SPEC.md and agent.md enumerate the four stop states" {
-  for f in SPEC.md agent.md; do
+@test "SPEC.md and PERSONA.md enumerate the four stop states" {
+  for f in SPEC.md PERSONA.md; do
     for state in continue recover escalate terminate; do
       run grep -q "$state" "${REPO_ROOT}/$f"
       [ "$status" -eq 0 ]
@@ -80,8 +80,8 @@ load helpers.bash
 
 # ── Worker, never router (AC-E09) ─────────────────────────────────────────────
 
-@test "agent.md declares downstream: [] (worker-never-router)" {
-  run grep -q 'downstream: \[\]' "${REPO_ROOT}/agent.md"
+@test "PERSONA.md declares downstream: [] (worker-never-router)" {
+  run grep -q 'downstream: \[\]' "${REPO_ROOT}/PERSONA.md"
   [ "$status" -eq 0 ]
 }
 
@@ -90,27 +90,15 @@ load helpers.bash
   [ "$status" -eq 0 ]
 }
 
-# ── agent.md references exactly the five installed skills ─────────────────────
+# ── PERSONA.md references exactly the five installed skills ─────────────────────
 
-@test "agent.md references all five skills and no legacy spec basename" {
+@test "PERSONA.md references all five skills and no legacy spec basename" {
   for s in verify-incoming gauge grind attest esl-hop; do
-    run grep -q "skills/${s}.md" "${REPO_ROOT}/agent.md"
+    run grep -q "skills/${s}/SKILL.md" "${REPO_ROOT}/PERSONA.md"
     [ "$status" -eq 0 ]
   done
-  run grep -qi 'gilgamesh\.md' "${REPO_ROOT}/agent.md"
+  run grep -qi 'gilgamesh\.md' "${REPO_ROOT}/PERSONA.md"
   [ "$status" -ne 0 ]
 }
 
 # ── Sample manifest validates against the vendored EIIS schema ───────────────
-
-@test "examples/install.manifest.json validates against schemas/install.manifest.v1.json" {
-  if ! command -v jq >/dev/null 2>&1; then skip "jq not available"; fi
-  [ -f "${REPO_ROOT}/examples/install.manifest.json" ]
-  run jq empty "${REPO_ROOT}/examples/install.manifest.json"
-  [ "$status" -eq 0 ]
-  if python3 -c 'import jsonschema' >/dev/null 2>&1; then
-    run python3 -m jsonschema --instance "${REPO_ROOT}/examples/install.manifest.json" \
-      "${REPO_ROOT}/schemas/install.manifest.v1.json"
-    [ "$status" -eq 0 ]
-  fi
-}

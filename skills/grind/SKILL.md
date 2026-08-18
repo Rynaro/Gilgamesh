@@ -61,14 +61,14 @@ command's stdout/stderr — including anything written to an ephemeral path like
 `/tmp/*` — proves a claim at Attest time via the `VERIFY-<name>` line, not via a
 `path:line` anchor. `EVIDENCE-<key>`/`PROPOSAL-TARGET` anchors resolve only to a
 committed repo file (the source or script the fact derives from); a command-output
-path is never a legal anchor target (`skills/attest.md` — repo-only anchor rule).
+path is never a legal anchor target (`skills/attest/SKILL.md` — repo-only anchor rule).
 
 ### Route around tool-surface gaps — never route around the oracle itself (verify-routing ladder)
 
 Your tool allowlist is scoped narrower than the repo's full verification surface by
 design (no generic `Bash(*)`). If the named oracle's most direct invocation form
 falls outside it, that is **not** grounds to skip the oracle or to substitute your
-own reasoning for its exit code. This is the same ladder `skills/attest.md` Step 1a
+own reasoning for its exit code. This is the same ladder `skills/attest/SKILL.md` Step 1a
 applies to required report lines:
 
 1. **Direct.** If the verification command is directly allowed by your tool list

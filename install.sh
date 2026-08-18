@@ -1,800 +1,123 @@
 #!/usr/bin/env bash
+# Declarative EIIS v3 package installer. Host adapters are nexus-owned.
 set -euo pipefail
 
-EIDOLON_NAME="gilgamesh"
-EIDOLON_SLUG="gilgamesh"
-EIDOLON_VERSION="1.0.0"
-METHODOLOGY="GILGAMESH"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# --- legacy cleanup arrays (pre-0.1 artefacts) ---
-# Basenames removed from <TARGET>/ when found on disk.
-LEGACY_SPEC_FILES=("GILGAMESH.md")
-# Subdir names removed from <TARGET>/skills/ when found as directories.
-LEGACY_SKILL_DIRS=("verify-incoming" "gauge" "grind" "attest" "esl-hop")
-
-# --- ECL version ---
-ECL_VERSION_FILE="${SCRIPT_DIR}/ECL_VERSION"
-if [[ -f "$ECL_VERSION_FILE" ]]; then
-  ECL_VERSION="$(head -n1 "$ECL_VERSION_FILE" | tr -d '[:space:]')"
-else
-  ECL_VERSION="none"
-fi
-
-# --- defaults ---
-TARGET="./.eidolons/${EIDOLON_NAME}"
-HOSTS="auto"
+PACKAGE_MANIFEST="$SCRIPT_DIR/manifest.json"
+TARGET=""
+HOSTS="raw"
 FORCE=false
 DRY_RUN=false
 NON_INTERACTIVE=false
 MANIFEST_ONLY=false
-SHARED_DISPATCH=false
 
 usage() {
-  cat <<EOF
+  cat <<'EOF'
 Usage: bash install.sh [OPTIONS]
-
-Options:
-  --target DIR            Target install dir (default: ${TARGET})
-  --hosts LIST            claude-code,copilot,cursor,opencode,codex,all (default: auto)
-  --shared-dispatch       Compose marker-bounded section in root AGENTS.md /
-                          CLAUDE.md / .github/copilot-instructions.md (opt-in).
-  --no-shared-dispatch    Skip root dispatch files (default). Per-vendor files
-                          remain self-sufficient.
-  --force                 Overwrite existing install
-  --dry-run               Print actions, no writes
-  --non-interactive       No prompts; fail on ambiguity (meta-installer mode)
-  --manifest-only         Only emit install.manifest.json
-  --version               Print Eidolon version
-  -h, --help              Show help
+  --target DIR
+  --hosts LIST              Accepted for orchestration compatibility; adapters are nexus-owned.
+  --force
+  --non-interactive
+  --dry-run
+  --manifest-only
+  --shared-dispatch         Accepted no-op; root routing is nexus-owned.
+  --no-shared-dispatch      Accepted no-op; root routing is nexus-owned.
+  --version
+  -h, --help
 EOF
 }
 
-# --- arg parsing ---
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --target)               TARGET="$2"; shift 2 ;;
-    --hosts)                HOSTS="$2"; shift 2 ;;
-    --shared-dispatch)      SHARED_DISPATCH=true; shift ;;
-    --no-shared-dispatch)   SHARED_DISPATCH=false; shift ;;
-    --force)                FORCE=true; shift ;;
-    --dry-run)              DRY_RUN=true; shift ;;
-    --non-interactive)      NON_INTERACTIVE=true; shift ;;
-    --manifest-only)        MANIFEST_ONLY=true; shift ;;
-    --version)              echo "${EIDOLON_VERSION}"; exit 0 ;;
-    -h|--help)              usage; exit 0 ;;
-    *)                      echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
-  esac
-done
-
-# --- host detection ---
-# EIIS v1.1 §4.5 — `.codex/` and root `AGENTS.md` are Codex signals; root
-# `AGENTS.md` is co-owned with copilot and treated as a definitive Codex
-# signal when no `.github/` is present.
-detect_hosts() {
-  local -a detected=()
-  [[ -f "CLAUDE.md" || -d ".claude" ]]          && detected+=("claude-code")
-  [[ -d ".github" ]]                             && detected+=("copilot")
-  [[ -d ".cursor" || -f ".cursorrules" ]]        && detected+=("cursor")
-  [[ -d ".opencode" ]]                           && detected+=("opencode")
-  if [[ -d ".codex" ]]; then
-    detected+=("codex")
-  elif [[ -f "AGENTS.md" && ! -d ".github" ]]; then
-    detected+=("codex")
-  fi
-  printf "%s\n" "${detected[@]+"${detected[@]}"}"
+pkg_name() { jq -r '.name' "$PACKAGE_MANIFEST"; }
+pkg_version() { jq -r '.version' "$PACKAGE_MANIFEST"; }
+sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  else shasum -a 256 "$1" | awk '{print $1}'; fi
+}
+tree_sha256() {
+  local root="$1" listing
+  listing="$(mktemp)"
+  find "$root" -type f ! -name install.receipt.json -print | LC_ALL=C sort | while IFS= read -r file; do
+    printf '%s  %s\n' "$(sha256_file "$file")" "${file#"$root/"}"
+  done > "$listing"
+  sha256_file "$listing"
+  rm -f "$listing"
 }
 
-if [[ "$HOSTS" == "auto" ]]; then
-  detected_list="$(detect_hosts | paste -sd, -)"
-  HOSTS="${detected_list:-none}"
-elif [[ "$HOSTS" == "all" ]]; then
-  HOSTS="claude-code,copilot,cursor,opencode,codex"
-fi
-
-# Validate host list (EIIS v1.1 §2.1, §2.7).
-IFS=',' read -ra _HOST_ARRAY <<< "$HOSTS"
-for _h in "${_HOST_ARRAY[@]}"; do
-  case "$_h" in
-    claude-code|copilot|cursor|opencode|codex|raw|none|"") : ;;
-    *) echo "Invalid --hosts value: $_h" >&2; exit 2 ;;
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --target) TARGET="$2"; shift 2 ;;
+    --hosts) HOSTS="$2"; shift 2 ;;
+    --force) FORCE=true; shift ;;
+    --non-interactive) NON_INTERACTIVE=true; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
+    --manifest-only) MANIFEST_ONLY=true; shift ;;
+    --shared-dispatch|--no-shared-dispatch) shift ;;
+    --version) pkg_version; exit 0 ;;
+    -h|--help) usage; exit 0 ;;
+    *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
   esac
 done
-unset _HOST_ARRAY _h
 
-hosts_contains() { [[ ",$HOSTS," == *",$1,"* ]]; }
-
-# --- resolve target ---
-if [[ "$DRY_RUN" != "true" ]]; then
-  mkdir -p "$TARGET"
-  TARGET="$(cd "$TARGET" && pwd)"
+jq empty "$PACKAGE_MANIFEST" >/dev/null
+NAME="$(pkg_name)"
+VERSION="$(pkg_version)"
+[ -n "$TARGET" ] || TARGET="./.eidolons/$NAME"
+MANIFEST_SHA="$(sha256_file "$PACKAGE_MANIFEST")"
+PREVIOUS_INSTALLED_AT=""
+if [ -f "$TARGET/install.receipt.json" ]; then
+  PREVIOUS_INSTALLED_AT="$(jq -r --arg name "$NAME" --arg version "$VERSION" --arg digest "$MANIFEST_SHA" '
+    if .package.name == $name and .package.version == $version and
+       .package.manifest_sha256 == $digest then .installed_at else empty end
+  ' "$TARGET/install.receipt.json" 2>/dev/null || true)"
 fi
 
-# Relative form for @-pointers (strip absolute prefix or leading ./)
-TARGET_REL="${TARGET#$(pwd)/}"
-TARGET_REL="${TARGET_REL#./}"
+if [ "$DRY_RUN" = true ]; then
+  printf 'install %s@%s -> %s (package only; hosts=%s)\n' "$NAME" "$VERSION" "$TARGET" "$HOSTS"
+  exit 0
+fi
 
-# --- idempotency check ---
-if [[ -f "${TARGET}/install.manifest.json" && "$FORCE" != "true" ]]; then
-  EXISTING_VER="$(grep -o '"version":"[^"]*"' "${TARGET}/install.manifest.json" 2>/dev/null | cut -d'"' -f4 || echo "unknown")"
-  if [[ "$NON_INTERACTIVE" == "true" ]]; then
-    echo "Existing install v${EXISTING_VER} at ${TARGET}. Pass --force to overwrite." >&2
+if [ -e "$TARGET" ] && [ "$FORCE" != true ]; then
+  if [ "$NON_INTERACTIVE" = true ]; then
+    printf 'Already installed at %s; pass --force.\n' "$TARGET" >&2
     exit 3
   fi
-  read -rp "Existing install v${EXISTING_VER} at ${TARGET}. Overwrite? [y/N] " confirm
-  [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
-fi
-
-# --- portable sha256 helper ---
-sha256_file() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | cut -d' ' -f1
-  elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$1" | cut -d' ' -f1
-  else
-    openssl dgst -sha256 -hex "$1" | awk '{print $2}'
-  fi
-}
-
-# cleanup_legacy <target>
-#
-# Sweep legacy pre-0.1 artefacts left behind by prior installs. Called once,
-# early, BEFORE any new content is written under <target>. Idempotent: no-op
-# when no legacy file exists.
-#
-# Reads two top-of-file arrays:
-#   LEGACY_SPEC_FILES  — basenames to rm -f at "<target>/<basename>"
-#   LEGACY_SKILL_DIRS  — skill names to rm -rf at "<target>/skills/<name>"
-#
-# Both arrays MAY be empty (loop is then a no-op). Never reads/writes outside <target>.
-cleanup_legacy() {
-  local target="$1"
-  local legacy
-  local legacy_skill_dir
-
-  if [ -z "${target}" ] || [ ! -d "${target}" ]; then
-    return 0
-  fi
-
-  # Sweep legacy spec filenames (e.g. GILGAMESH.md)
-  for legacy in "${LEGACY_SPEC_FILES[@]}"; do
-    if [ -n "${legacy}" ] && [ -f "${target}/${legacy}" ]; then
-      rm -f "${target}/${legacy}"
-      echo "  swept legacy spec file: ${target}/${legacy}" >&2
-    fi
-  done
-
-  # Sweep legacy subdir-style skills (e.g. skills/gauge/SKILL.md)
-  for legacy_skill_dir in "${LEGACY_SKILL_DIRS[@]}"; do
-    if [ -n "${legacy_skill_dir}" ] && [ -d "${target}/skills/${legacy_skill_dir}" ]; then
-      rm -rf "${target}/skills/${legacy_skill_dir}"
-      echo "  swept legacy skill subdir: ${target}/skills/${legacy_skill_dir}" >&2
-    fi
-  done
-
-  return 0
-}
-
-# canonical_inventory_sweep <target>
-#
-# Remove every file under <target>/ not present in the in-memory allow-set
-# FILES_WRITTEN_PATHS. The allow-set is maintained by files_append() during the
-# install; each successful write appends its target-relative path.
-#
-# EIIS v1.4 §6.X — manifest-driven cleanup obligation.
-# Bash 3.2 compatible. Idempotent: re-running on a clean target is a no-op.
-canonical_inventory_sweep() {
-  local target="$1"
-  local file_rel
-  local found
-  local known
-
-  if [ -z "${target}" ] || [ ! -d "${target}" ]; then
-    return 0
-  fi
-
-  find "${target}" -type f -print0 | while IFS= read -r -d '' file; do
-    file_rel="${file#${target}/}"
-
-    found=0
-    for known in "${FILES_WRITTEN_PATHS[@]+"${FILES_WRITTEN_PATHS[@]}"}"; do
-      case "${known}" in
-        *"/${file_rel}"|"${file_rel}")
-          found=1
-          break
-          ;;
-      esac
-    done
-
-    if [ "${found}" -eq 0 ]; then
-      rm -f "${file}"
-      echo "  swept non-whitelisted file: ${file}" >&2
-    fi
-  done
-
-  # Remove any empty directories left after the sweep.
-  find "${target}" -mindepth 1 -type d -empty -delete 2>/dev/null || true
-
-  return 0
-}
-
-# --- resolve spec source ---
-SRC_SPEC="${SCRIPT_DIR}/SPEC.md"
-if [[ ! -f "${SRC_SPEC}" ]]; then
-  echo "ERROR: spec source not found: ${SRC_SPEC}" >&2
+  printf 'Already installed at %s; pass --force.\n' "$TARGET" >&2
   exit 3
 fi
 
-# upsert_eidolon_block <file> <content>
-#
-# Owns a marker-bounded region in a composable dispatch file. Rewrites the body
-# in place when markers already exist; appends a new block otherwise. Cleans up
-# any pre-existing symlink at the target.
-upsert_eidolon_block() {
-  local dst="$1" content="$2"
-  local start="<!-- eidolon:${EIDOLON_NAME} start -->"
-  local end="<!-- eidolon:${EIDOLON_NAME} end -->"
-
-  if [[ "$DRY_RUN" == "true" ]]; then
-    local action="append"
-    [[ -f "$dst" ]] && grep -qF "$start" "$dst" 2>/dev/null && action="rewrite"
-    echo "[dry-run] ${action} eidolon:${EIDOLON_NAME} block in ${dst}"
-    return
-  fi
-
-  mkdir -p "$(dirname "$dst")" 2>/dev/null || true
-  [[ -L "$dst" ]] && rm -f "$dst"
-
-  local content_file tmp
-  content_file="$(mktemp)"
-  printf '%s\n' "$content" > "$content_file"
-
-  if [[ -f "$dst" ]] && grep -qF "$start" "$dst" 2>/dev/null; then
-    tmp="$(mktemp)"
-    awk -v start="$start" -v end="$end" -v cf="$content_file" '
-      BEGIN { in_block = 0 }
-      $0 == start {
-        print start
-        while ((getline line < cf) > 0) print line
-        close(cf)
-        in_block = 1
-        next
-      }
-      $0 == end {
-        print end
-        in_block = 0
-        next
-      }
-      !in_block { print }
-    ' "$dst" > "$tmp"
-    mv "$tmp" "$dst"
-    echo "  rewrote eidolon:${EIDOLON_NAME} block in ${dst}"
-  elif [[ -f "$dst" ]]; then
-    { printf '\n%s\n' "$start"; cat "$content_file"; printf '%s\n' "$end"; } >> "$dst"
-    echo "  appended eidolon:${EIDOLON_NAME} block to ${dst}"
-  else
-    { printf '%s\n' "$start"; cat "$content_file"; printf '%s\n' "$end"; } > "$dst"
-    echo "  created ${dst} with eidolon:${EIDOLON_NAME} block"
-  fi
-
-  rm -f "$content_file"
-}
-
-if [[ "$MANIFEST_ONLY" != "true" ]]; then
-  if [[ "$DRY_RUN" == "true" ]]; then
-    echo "[dry-run] Target: ${TARGET}"
-    echo "[dry-run] Hosts:  ${HOSTS}"
-    echo "[dry-run] Would write:"
-    echo "  ${TARGET}/agent.md"
-    echo "  ${TARGET}/SPEC.md"
-    echo "  ${TARGET}/ECL_VERSION"
-    echo "  ${TARGET}/skills/verify-incoming.md"
-    echo "  ${TARGET}/skills/gauge.md"
-    echo "  ${TARGET}/skills/grind.md"
-    echo "  ${TARGET}/skills/attest.md"
-    echo "  ${TARGET}/skills/esl-hop.md"
-    echo "  ${TARGET}/schemas/taskstate.v1.json"
-    echo "  ${TARGET}/schemas/handoff-request.v1.json"
-    echo "  ${TARGET}/schemas/mission-contract.v1.json"
-    echo "  ${TARGET}/schemas/capability-authority.v1.json"
-    echo "  ${TARGET}/schemas/ecl-envelope.v1.json"
-    echo "  ${TARGET}/schemas/ecl-envelope.v2.json"
-    echo "  ${TARGET}/schemas/ecl-base-profile.v1.json"
-    echo "  ${TARGET}/schemas/install.manifest.v1.json"
-    hosts_contains "claude-code" && echo "  CLAUDE.md (append @${TARGET_REL}/agent.md)"
-    hosts_contains "claude-code" && echo "  .claude/agents/${EIDOLON_NAME}.md"
-    hosts_contains "copilot"     && echo "  .github/copilot-instructions.md"
-    hosts_contains "cursor"      && echo "  .cursor/rules/${EIDOLON_NAME}.mdc"
-    hosts_contains "opencode"    && echo "  .opencode/agents/${EIDOLON_NAME}.md"
-    hosts_contains "codex"       && echo "  AGENTS.md (eidolon:${EIDOLON_NAME} marker block)"
-    hosts_contains "codex"       && echo "  .codex/agents/${EIDOLON_NAME}.md"
-  else
-    # Create directory structure
-    mkdir -p \
-      "${TARGET}/skills" \
-      "${TARGET}/schemas"
-
-    # Sweep legacy artefacts before writing new content.
-    cleanup_legacy "${TARGET}"
-
-    # Copy agent files
-    cp "${SCRIPT_DIR}/agent.md"                                   "${TARGET}/agent.md"
-    cp "${SRC_SPEC}"                                              "${TARGET}/SPEC.md"
-    cp "${SCRIPT_DIR}/ECL_VERSION"                                "${TARGET}/ECL_VERSION"
-
-    # Copy the Gilgamesh methodology schemas + vendored ECL/EIIS schemas.
-    # ecl-envelope.v1.json is RETAINED alongside v2 (not replaced) so Gilgamesh's
-    # own tooling can still validate a v1.x sidecar received during the ECL
-    # §7.3 compatibility window.
-    cp "${SCRIPT_DIR}/schemas/taskstate.v1.json"                  "${TARGET}/schemas/taskstate.v1.json"
-    cp "${SCRIPT_DIR}/schemas/handoff-request.v1.json"            "${TARGET}/schemas/handoff-request.v1.json"
-    cp "${SCRIPT_DIR}/schemas/mission-contract.v1.json"           "${TARGET}/schemas/mission-contract.v1.json"
-    cp "${SCRIPT_DIR}/schemas/capability-authority.v1.json"       "${TARGET}/schemas/capability-authority.v1.json"
-    cp "${SCRIPT_DIR}/schemas/ecl-envelope.v1.json"               "${TARGET}/schemas/ecl-envelope.v1.json"
-    cp "${SCRIPT_DIR}/schemas/ecl-envelope.v2.json"               "${TARGET}/schemas/ecl-envelope.v2.json"
-    cp "${SCRIPT_DIR}/schemas/ecl-base-profile.v1.json"           "${TARGET}/schemas/ecl-base-profile.v1.json"
-    cp "${SCRIPT_DIR}/schemas/install.manifest.v1.json"           "${TARGET}/schemas/install.manifest.v1.json"
-
-    # --- shared composable block (opt-in via --shared-dispatch) ---
-    SHARED_BLOCK="## ${METHODOLOGY} — Bounded-authority fallthrough generalist (v${EIDOLON_VERSION})
-
-Entry:     \`${TARGET_REL}/agent.md\`
-Full spec: \`${TARGET_REL}/SPEC.md\`
-Cycle:     G (Gauge) → I (Inventory) → L (Lock) → G (Grind) → A (Attest)
-
-**P0 (non-negotiable):** external-only verify (a NAMED test/parser/diff/typecheck/env-feedback — never self-critique; your blade might be Excalipoor); PROPOSE-only across the authority line (sandbox-first — the parent commits, never the real tree); worker-never-router (no DELEGATE/DECIDE/CRITIQUE/REQUEST, no spawn — a delegation need is a handoff-request PROPOSEd upward, downstream: []); specialist-preferring (fallthrough only — REFUSE clean specialist fits); bounded authority (read/write/exec/network/secrets/deploy × default/escalation — deploy never-grantable); bounded budget + stopping policy {continue, recover, escalate, terminate}; no permanent memory (the wanderer leaves with no weapons)."
-
-    # --- per-skill vendor wiring helpers ---
-    strip_frontmatter() {
-      local f="$1"
-      if [[ "$(head -1 "$f")" == "---" ]]; then
-        awk 'NR==1 && /^---$/ {in_fm=1; next}
-             in_fm && /^---$/ {in_fm=0; next}
-             !in_fm {print}' "$f"
-      else
-        cat "$f"
-      fi
-    }
-    extract_fm_field() {
-      awk -v field="$2" '
-        NR==1 && /^---$/ { in_fm=1; next }
-        in_fm && /^---$/ { exit }
-        in_fm { p=index($0, field ":"); if (p==1) { sub("^" field ":[[:space:]]*", ""); print; exit } }
-      ' "$1"
-    }
-    # wire_skill <skill_slug>
-    #
-    # Dual-writes a skill file per EIIS v1.3 §4.2.4:
-    #   - source-of-truth: ${TARGET}/skills/<skill_slug>.md   (flat layout)
-    #   - vendor copy:     .claude/skills/${EIDOLON_SLUG}-<skill_slug>/SKILL.md
-    #
-    # Also writes copilot/cursor vendor copies when those hosts are wired.
-    wire_skill() {
-      local skill="$1"
-      local src="${SCRIPT_DIR}/skills/${skill}.md"
-      local dst_src="${TARGET}/skills/${skill}.md"
-      local dst_vendor=".claude/skills/${EIDOLON_SLUG}-${skill}/SKILL.md"
-
-      if [[ ! -f "${src}" ]]; then
-        echo "ERROR: skill source not found: ${src}" >&2
-        exit 3
-      fi
-
-      mkdir -p "$(dirname "${dst_src}")"
-      cp "${src}" "${dst_src}"
-
-      local description
-      description="$(extract_fm_field "${src}" "description")"
-      [[ -z "$description" ]] && description="${skill}"
-
-      if hosts_contains "claude-code"; then
-        mkdir -p "$(dirname "${dst_vendor}")"
-        cp "${src}" "${dst_vendor}"
-      fi
-      if hosts_contains "copilot"; then
-        mkdir -p ".github/instructions"
-        {
-          echo "---"
-          echo "applyTo: \"**\""
-          echo "description: \"${description}\""
-          echo "---"
-          strip_frontmatter "${src}"
-        } > ".github/instructions/${EIDOLON_SLUG}-${skill}.instructions.md"
-      fi
-      if hosts_contains "cursor"; then
-        mkdir -p ".cursor/rules"
-        {
-          echo "---"
-          echo "description: \"${description}\""
-          echo "alwaysApply: false"
-          echo "---"
-          strip_frontmatter "${src}"
-        } > ".cursor/rules/${EIDOLON_SLUG}-${skill}.mdc"
-      fi
-    }
-
-    # Emit per-skill source-of-truth + vendor files for every skill.
-    for skill in verify-incoming gauge grind attest esl-hop; do
-      wire_skill "${skill}"
-    done
-
-    # --- host dispatch wiring ---
-    if hosts_contains "claude-code"; then
-      [[ "$SHARED_DISPATCH" == "true" ]] && upsert_eidolon_block "CLAUDE.md" "$SHARED_BLOCK"
-
-      # Subagent dispatch — always written when claude-code wired.
-      mkdir -p ".claude/agents"
-      if [[ ! -f ".claude/agents/${EIDOLON_NAME}.md" || "$FORCE" == "true" ]]; then
-        cat > ".claude/agents/${EIDOLON_NAME}.md" <<AGENT
----
-name: ${EIDOLON_NAME}
-description: "Bounded-authority, specialist-preferring fallthrough generalist. Dispatched only when no specialist scores >= tau AND the Step-2(a) mechanical predicate resolves actionable; sandbox-first, PROPOSE-only (never the real tree)."
-model: sonnet
-tools: Read, Grep, Glob, Bash(eidolons sandbox:*), Bash(make:*), Bash(bats:*), Bash(rspec:*), Bash(jest:*), Bash(pytest:*), Bash(go test:*), Bash(shellcheck:*), Bash(shasum:*), Bash(wc:*), mcp__atlas-aci__*, mcp__crystalium__*, mcp__tonberry__*
-x-eidolons-mcp-wired: [atlas-aci, crystalium, tonberry]
----
-
-You are ${METHODOLOGY}. Read these two files in order at session start:
-
-1. \`./.eidolons/${EIDOLON_SLUG}/agent.md\` — always-loaded P0 rules.
-2. \`./.eidolons/${EIDOLON_SLUG}/SPEC.md\` — deep on-demand methodology spec.
-
-Skills live at \`./.eidolons/${EIDOLON_SLUG}/skills/<skill>.md\` (load on demand).
-
-## Mission report protocol (P0 — non-negotiable, applies whenever a mission enumerates required labeled lines)
-
-1. The FIRST line of your final report is \`REQUIRED-LABELS:\` followed by every
-   required label copied from the mission — enumerate before you answer; a
-   report that skips enumeration is invalid.
-2. Then one line per label, format \`LABEL: value\`. The label is copied
-   VERBATIM but WITHOUT any parenthetical hint — in "EVIDENCE-x (path:line)"
-   the "(path:line)" describes the VALUE shape and is never part of the
-   label. Write \`EVIDENCE-x: <path>:<line>\`.
-3. The value's FIRST whitespace-delimited token IS the answer (a number,
-   pass, fail, or path:line); explanatory annotation may follow after a
-   space.
-4. Never omit a required line. If a verification is blocked, its line is
-   still emitted with value \`fail\` plus the blocker as annotation.
-
-**Quoted-anchor rule** (Excalipoor applied to citations): every \`path:line\`
-anchor you emit must be followed by a space and a short double-quoted
-verbatim fragment (3–6 words) of that exact line — copied AFTER Reading the
-line, never from memory. If you cannot quote it, you have not read it; do
-not cite it. Example: \`EVIDENCE-enum_count:
-schemas/roster-entry.schema.json:11 "scout, planner, coder"\`.
-
-**Pre-emit anchor re-read rule** (mechanical, not exhortative): before
-writing ANY \`path:line\` anchor into the final report, Read that exact line
-number in that file and confirm the line's text contains the verbatim
-fragment being quoted. If the line does not contain the fragment (or is
-empty/out of range), the anchor is WRONG — re-locate the true line with
-Grep on the fragment, and cite the corrected line number. Never emit an
-anchor you have not re-read at that exact line in this same mission; the
-quoted fragment must be present on the cited line. A drifted anchor is an
-inadmissible attestation — the Excalipoor rule applied to line numbers: a
-citation you cannot re-read is a fake blade.
-
-**Repo-only anchor rule:** EVIDENCE and PROPOSAL-TARGET anchors MUST point
-at a repo-relative path that exists in the working checkout (a committed
-source file). NEVER cite an ephemeral, temp, sandbox-scratch, or
-command-output path (\`/tmp/*\`, redirected stdout, etc.). If a fact is
-produced by RUNNING a command, the command's result belongs in the
-\`VERIFY-<name>\` line; the \`EVIDENCE-<key>\` anchor points at the repo file
-or script the fact derives from (e.g. cite the script's source line, not
-its runtime output file).
-
-**Verify-routing ladder:** (1) if the verification command is directly
-allowed by your tool list (make, bats, shellcheck, pytest, go test, jest,
-rspec, shasum, wc) — run it directly; (2) otherwise run it through the
-delegated sandbox: \`eidolons sandbox run --allow-unsafe-host -- <cmd>\` (for
-trusted repo verifier scripts; the sandbox captures pass/fail); (3) only if
-both rungs are unavailable, emit the VERIFY line with \`fail\` + blocker
-annotation. Never skip a rung, never omit the line, never hand-derive a
-result you could execute.
-AGENT
-      fi
+mkdir -p "$TARGET"
+if [ "$MANIFEST_ONLY" != true ]; then
+  cp "$SCRIPT_DIR/PERSONA.md" "$TARGET/PERSONA.md"
+  cp "$SCRIPT_DIR/SPEC.md" "$TARGET/SPEC.md"
+  cp "$SCRIPT_DIR/EIIS_VERSION" "$TARGET/EIIS_VERSION"
+  cp "$PACKAGE_MANIFEST" "$TARGET/manifest.json"
+  for dir in skills hooks shared; do
+    if [ -d "$SCRIPT_DIR/$dir" ]; then
+      rm -rf "$TARGET/$dir"
+      cp -R "$SCRIPT_DIR/$dir" "$TARGET/$dir"
     fi
-
-    if hosts_contains "copilot"; then
-      [[ "$SHARED_DISPATCH" == "true" ]] && upsert_eidolon_block ".github/copilot-instructions.md" "$SHARED_BLOCK"
-    fi
-
-    if hosts_contains "cursor"; then
-      # Drop the legacy methodology-level rule — per-skill rules are canonical now.
-      [[ -f ".cursor/rules/${EIDOLON_NAME}.mdc" && "$FORCE" == "true" ]] && rm -f ".cursor/rules/${EIDOLON_NAME}.mdc"
-    fi
-
-    if hosts_contains "opencode"; then
-      mkdir -p ".opencode/agents"
-      if [[ ! -f ".opencode/agents/${EIDOLON_NAME}.md" || "$FORCE" == "true" ]]; then
-        printf "# %s — %s\n\nSee \`%s/agent.md\` for the %s methodology entry point.\n" \
-          "${METHODOLOGY}" "${EIDOLON_NAME}" "${TARGET_REL}" "${METHODOLOGY}" \
-          > ".opencode/agents/${EIDOLON_NAME}.md"
-      fi
-    fi
-
-    # Codex (EIIS v1.1 §4.5). Required: `.codex/agents/<name>.md` with YAML
-    # frontmatter (`name`, `description`); SHOULD point at the methodology
-    # entry. Body mirrors the Claude subagent prompt for parity (§4.5.3.3
-    # allows divergence; we choose to mirror).
-    if hosts_contains "codex"; then
-      mkdir -p ".codex/agents"
-      if [[ ! -f ".codex/agents/${EIDOLON_NAME}.md" || "$FORCE" == "true" ]]; then
-        cat > ".codex/agents/${EIDOLON_NAME}.md" <<CODEX_AGENT
----
-name: ${EIDOLON_NAME}
-description: Bounded-authority fallthrough generalist subagent — the orchestrator delegates a typed mission-contract that fit no specialist; gauges it, gathers context, locks a plan, grinds under external-only verification, and PROPOSEs an evidence-anchored result. Never writes the real tree; never routes or spawns onward.
----
-
-# ${METHODOLOGY} — Codex subagent
-
-${METHODOLOGY} runs the G→I→L→G→A cycle (Gauge, Inventory, Lock, Grind, Attest).
-Given a typed mission-contract that fit no specialist, it works within a bounded
-capability-authority table, gates every mutation on a NAMED external oracle, and
-proposes a verified result — it never writes the real tree and never routes work
-onward.
-
-When Codex delegates to this subagent, treat the methodology in
-\`${TARGET_REL}/agent.md\` as authoritative. The full ruleset lives in
-\`${TARGET_REL}/SPEC.md\`. Skills load on demand — see
-\`${TARGET_REL}/skills/\`.
-
-## P0 (non-negotiable)
-
-- External-only verify: a NAMED test/parser/diff/typecheck/env-feedback — never
-  self-critique (your blade might be Excalipoor).
-- PROPOSE-only across the authority line: sandbox-first; the parent commits.
-- Worker, never router: no DELEGATE/DECIDE/CRITIQUE/REQUEST, no spawn; a delegation
-  need is a handoff-request PROPOSEd upward (downstream: []).
-- Specialist-preferring: fallthrough only — REFUSE clean specialist fits cheaply.
-- Bounded authority (deploy never-grantable) + bounded budget + a stopping policy
-  over {continue, recover, escalate, terminate}.
-- No permanent memory: the wanderer leaves with no weapons.
-
-## When to use
-
-When the router finds no specialist scoring >= tau but the prompt is actionable — a
-mixed read+act mission that spans capability classes or fits no specialist.
-CODEX_AGENT
-      fi
-    fi
-
-    # Root AGENTS.md is co-owned by `copilot` and `codex` per EIIS v1.1
-    # §4.1.0. Write the marker block when --shared-dispatch is set OR when
-    # codex is wired (Codex's primary instruction surface).
-    if [[ "$SHARED_DISPATCH" == "true" ]] || hosts_contains "codex"; then
-      upsert_eidolon_block "AGENTS.md" "$SHARED_BLOCK"
-    fi
-  fi
-fi
-
-# --- emit manifest ---
-if [[ "$DRY_RUN" != "true" ]]; then
-  INSTALLED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-  # Build hosts_wired JSON array
-  hosts_json="["
-  first=true
-  IFS=',' read -ra host_list <<< "$HOSTS"
-  for h in "${host_list[@]}"; do
-    [[ "$h" == "none" ]] && continue
-    [[ "$first" == "true" ]] && first=false || hosts_json+=", "
-    hosts_json+="\"$h\""
   done
-  hosts_json+="]"
-
-  # Build files_written and skills JSON arrays.
-  # FILES_WRITTEN_PATHS is an indexed array used by canonical_inventory_sweep.
-  FILES_WRITTEN_PATHS=()
-  files_json="[]"
-  skills_json="[]"
-  if [[ "$MANIFEST_ONLY" != "true" && -f "${TARGET}/agent.md" ]]; then
-    sha_agent=$(sha256_file "${TARGET}/agent.md")
-    sha_spec=$(sha256_file "${TARGET}/SPEC.md")
-    sha_ecl_ver=$(sha256_file "${TARGET}/ECL_VERSION")
-    sha_verinc=$(sha256_file "${TARGET}/skills/verify-incoming.md")
-    sha_gauge=$(sha256_file "${TARGET}/skills/gauge.md")
-    sha_grind=$(sha256_file "${TARGET}/skills/grind.md")
-    sha_attest=$(sha256_file "${TARGET}/skills/attest.md")
-    sha_eslhop=$(sha256_file "${TARGET}/skills/esl-hop.md")
-    sha_taskstate=$(sha256_file "${TARGET}/schemas/taskstate.v1.json")
-    sha_handoff=$(sha256_file "${TARGET}/schemas/handoff-request.v1.json")
-    sha_mission=$(sha256_file "${TARGET}/schemas/mission-contract.v1.json")
-    sha_capauth=$(sha256_file "${TARGET}/schemas/capability-authority.v1.json")
-    sha_ecl_env=$(sha256_file "${TARGET}/schemas/ecl-envelope.v1.json")
-    sha_ecl_env_v2=$(sha256_file "${TARGET}/schemas/ecl-envelope.v2.json")
-    sha_ecl_base=$(sha256_file "${TARGET}/schemas/ecl-base-profile.v1.json")
-    sha_manifest=$(sha256_file "${TARGET}/schemas/install.manifest.v1.json")
-
-    # SHA of vendor copies (same content as source-of-truth)
-    sha_verinc_vendor=""
-    sha_gauge_vendor=""
-    sha_grind_vendor=""
-    sha_attest_vendor=""
-    sha_eslhop_vendor=""
-    if hosts_contains "claude-code"; then
-      sha_verinc_vendor=$(sha256_file ".claude/skills/${EIDOLON_SLUG}-verify-incoming/SKILL.md")
-      sha_gauge_vendor=$(sha256_file ".claude/skills/${EIDOLON_SLUG}-gauge/SKILL.md")
-      sha_grind_vendor=$(sha256_file ".claude/skills/${EIDOLON_SLUG}-grind/SKILL.md")
-      sha_attest_vendor=$(sha256_file ".claude/skills/${EIDOLON_SLUG}-attest/SKILL.md")
-      sha_eslhop_vendor=$(sha256_file ".claude/skills/${EIDOLON_SLUG}-esl-hop/SKILL.md")
-    fi
-
-    files_entries=""
-    files_append() {
-      local json_entry="$1"
-      local path_val="$2"
-      if [[ -z "$files_entries" ]]; then
-        files_entries="    ${json_entry}"
-      else
-        files_entries="${files_entries},
-    ${json_entry}"
-      fi
-      # Populate the allow-set for canonical_inventory_sweep.
-      if [[ -n "${path_val}" ]]; then
-        FILES_WRITTEN_PATHS+=("${path_val}")
-      fi
-    }
-    files_append \
-      "{\"path\": \"agent.md\",                        \"sha256\": \"${sha_agent}\",     \"role\": \"agent-profile\", \"mode\": \"created\"}" \
-      "agent.md"
-    files_append \
-      "{\"path\": \"SPEC.md\",                         \"sha256\": \"${sha_spec}\",      \"role\": \"spec\",          \"mode\": \"created\"}" \
-      "SPEC.md"
-    files_append \
-      "{\"path\": \"ECL_VERSION\",                     \"sha256\": \"${sha_ecl_ver}\",   \"role\": \"ecl-version\",   \"mode\": \"created\"}" \
-      "ECL_VERSION"
-    files_append \
-      "{\"path\": \"skills/verify-incoming.md\",       \"sha256\": \"${sha_verinc}\",    \"role\": \"skill\",         \"mode\": \"created\"}" \
-      "skills/verify-incoming.md"
-    files_append \
-      "{\"path\": \"skills/gauge.md\",                 \"sha256\": \"${sha_gauge}\",     \"role\": \"skill\",         \"mode\": \"created\"}" \
-      "skills/gauge.md"
-    files_append \
-      "{\"path\": \"skills/grind.md\",                 \"sha256\": \"${sha_grind}\",     \"role\": \"skill\",         \"mode\": \"created\"}" \
-      "skills/grind.md"
-    files_append \
-      "{\"path\": \"skills/attest.md\",                \"sha256\": \"${sha_attest}\",    \"role\": \"skill\",         \"mode\": \"created\"}" \
-      "skills/attest.md"
-    files_append \
-      "{\"path\": \"skills/esl-hop.md\",               \"sha256\": \"${sha_eslhop}\",    \"role\": \"skill\",         \"mode\": \"created\"}" \
-      "skills/esl-hop.md"
-    if hosts_contains "claude-code"; then
-      files_append \
-        "{\"path\": \".claude/skills/${EIDOLON_SLUG}-verify-incoming/SKILL.md\", \"sha256\": \"${sha_verinc_vendor}\", \"role\": \"skill\", \"mode\": \"created\"}" \
-        ""
-      files_append \
-        "{\"path\": \".claude/skills/${EIDOLON_SLUG}-gauge/SKILL.md\", \"sha256\": \"${sha_gauge_vendor}\", \"role\": \"skill\", \"mode\": \"created\"}" \
-        ""
-      files_append \
-        "{\"path\": \".claude/skills/${EIDOLON_SLUG}-grind/SKILL.md\", \"sha256\": \"${sha_grind_vendor}\", \"role\": \"skill\", \"mode\": \"created\"}" \
-        ""
-      files_append \
-        "{\"path\": \".claude/skills/${EIDOLON_SLUG}-attest/SKILL.md\", \"sha256\": \"${sha_attest_vendor}\", \"role\": \"skill\", \"mode\": \"created\"}" \
-        ""
-      files_append \
-        "{\"path\": \".claude/skills/${EIDOLON_SLUG}-esl-hop/SKILL.md\", \"sha256\": \"${sha_eslhop_vendor}\", \"role\": \"skill\", \"mode\": \"created\"}" \
-        ""
-    fi
-    files_append \
-      "{\"path\": \"schemas/taskstate.v1.json\",            \"sha256\": \"${sha_taskstate}\", \"role\": \"other\", \"mode\": \"created\"}" \
-      "schemas/taskstate.v1.json"
-    files_append \
-      "{\"path\": \"schemas/handoff-request.v1.json\",      \"sha256\": \"${sha_handoff}\",   \"role\": \"other\", \"mode\": \"created\"}" \
-      "schemas/handoff-request.v1.json"
-    files_append \
-      "{\"path\": \"schemas/mission-contract.v1.json\",     \"sha256\": \"${sha_mission}\",   \"role\": \"other\", \"mode\": \"created\"}" \
-      "schemas/mission-contract.v1.json"
-    files_append \
-      "{\"path\": \"schemas/capability-authority.v1.json\", \"sha256\": \"${sha_capauth}\",   \"role\": \"other\", \"mode\": \"created\"}" \
-      "schemas/capability-authority.v1.json"
-    files_append \
-      "{\"path\": \"schemas/ecl-envelope.v1.json\",         \"sha256\": \"${sha_ecl_env}\",   \"role\": \"other\", \"mode\": \"created\"}" \
-      "schemas/ecl-envelope.v1.json"
-    files_append \
-      "{\"path\": \"schemas/ecl-envelope.v2.json\",         \"sha256\": \"${sha_ecl_env_v2}\", \"role\": \"other\", \"mode\": \"created\"}" \
-      "schemas/ecl-envelope.v2.json"
-    files_append \
-      "{\"path\": \"schemas/ecl-base-profile.v1.json\",     \"sha256\": \"${sha_ecl_base}\",  \"role\": \"other\", \"mode\": \"created\"}" \
-      "schemas/ecl-base-profile.v1.json"
-    files_append \
-      "{\"path\": \"schemas/install.manifest.v1.json\",     \"sha256\": \"${sha_manifest}\",  \"role\": \"other\", \"mode\": \"created\"}" \
-      "schemas/install.manifest.v1.json"
-
-    # Codex artefacts (EIIS v1.1 §4.5.5).
-    if hosts_contains "codex"; then
-      if [[ -f ".codex/agents/${EIDOLON_NAME}.md" ]]; then
-        sha_codex=$(sha256_file ".codex/agents/${EIDOLON_NAME}.md")
-        files_append \
-          "{\"path\": \".codex/agents/${EIDOLON_NAME}.md\", \"sha256\": \"${sha_codex}\", \"role\": \"dispatch\", \"mode\": \"created\"}" \
-          ""
-      fi
-      if [[ -f "AGENTS.md" ]]; then
-        sha_agents=$(sha256_file "AGENTS.md")
-        files_append \
-          "{\"path\": \"AGENTS.md\", \"sha256\": \"${sha_agents}\", \"role\": \"dispatch\"}" \
-          ""
-      fi
-    fi
-
-    # EIIS v1.4 §6.X — canonical inventory sweep. Remove any non-whitelisted
-    # file from <target>/ that is not in the current files_written[] set.
-    # Belt-and-braces: runs AFTER all writes, BEFORE manifest finalisation.
-    canonical_inventory_sweep "${TARGET}"
-
-    files_json="[
-${files_entries}
-  ]"
-
-    # Build skills[] JSON array (EIIS v1.3 §4.2.4)
-    if hosts_contains "claude-code"; then
-      skills_json="[
-    {\"name\": \"verify-incoming\", \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/verify-incoming.md\", \"source_sha256\": \"${sha_verinc}\", \"vendor_path\": \".claude/skills/${EIDOLON_SLUG}-verify-incoming/SKILL.md\", \"vendor_sha256\": \"${sha_verinc_vendor}\"},
-    {\"name\": \"gauge\",           \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/gauge.md\",           \"source_sha256\": \"${sha_gauge}\",  \"vendor_path\": \".claude/skills/${EIDOLON_SLUG}-gauge/SKILL.md\",           \"vendor_sha256\": \"${sha_gauge_vendor}\"},
-    {\"name\": \"grind\",           \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/grind.md\",           \"source_sha256\": \"${sha_grind}\",  \"vendor_path\": \".claude/skills/${EIDOLON_SLUG}-grind/SKILL.md\",           \"vendor_sha256\": \"${sha_grind_vendor}\"},
-    {\"name\": \"attest\",          \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/attest.md\",          \"source_sha256\": \"${sha_attest}\", \"vendor_path\": \".claude/skills/${EIDOLON_SLUG}-attest/SKILL.md\",          \"vendor_sha256\": \"${sha_attest_vendor}\"},
-    {\"name\": \"esl-hop\",         \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/esl-hop.md\",         \"source_sha256\": \"${sha_eslhop}\", \"vendor_path\": \".claude/skills/${EIDOLON_SLUG}-esl-hop/SKILL.md\",         \"vendor_sha256\": \"${sha_eslhop_vendor}\"}
-  ]"
-    else
-      skills_json="[
-    {\"name\": \"verify-incoming\", \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/verify-incoming.md\", \"source_sha256\": \"${sha_verinc}\"},
-    {\"name\": \"gauge\",           \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/gauge.md\",           \"source_sha256\": \"${sha_gauge}\"},
-    {\"name\": \"grind\",           \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/grind.md\",           \"source_sha256\": \"${sha_grind}\"},
-    {\"name\": \"attest\",          \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/attest.md\",          \"source_sha256\": \"${sha_attest}\"},
-    {\"name\": \"esl-hop\",         \"source_path\": \".eidolons/${EIDOLON_SLUG}/skills/esl-hop.md\",         \"source_sha256\": \"${sha_eslhop}\"}
-  ]"
-    fi
-  fi
-
-  AGENT_TOKENS=$(wc -w < "${TARGET}/agent.md" | awk '{printf "%d", $1/0.75}')
-
-  cat > "${TARGET}/install.manifest.json" <<MANIFEST_EOF
-{
-  "eidolon": "${EIDOLON_NAME}",
-  "version": "${EIDOLON_VERSION}",
-  "methodology": "${METHODOLOGY}",
-  "installed_at": "${INSTALLED_AT}",
-  "target": "${TARGET}",
-  "hosts_wired": ${hosts_json},
-  "canonical_inventory_strict": true,
-  "spec_file": ".eidolons/${EIDOLON_SLUG}/SPEC.md",
-  "skills": ${skills_json},
-  "files_written": ${files_json},
-  "handoffs_declared": {
-    "upstream": ["orchestrator"],
-    "downstream": []
-  },
-  "token_budget": {
-    "entry": ${AGENT_TOKENS},
-    "working_set_target": 3000
-  },
-  "security": {
-    "reads_repo": true,
-    "reads_network": false,
-    "writes_repo": false,
-    "persists": []
-  },
-  "comm": {
-    "envelope_version": "${ECL_VERSION}",
-    "emits": ["PROPOSE", "INFORM", "ESCALATE", "REFUSE", "ACKNOWLEDGE", "RESUME"],
-    "verifies": ["mission-contract"]
-  }
-}
-MANIFEST_EOF
-
-  echo ""
-  echo "${METHODOLOGY} installed to: ${TARGET}"
-  echo "Hosts wired: ${HOSTS}"
-  echo ""
-  echo "✓ agent.md: ${AGENT_TOKENS} tokens (roster entry target ≤900; hard cap 1000)"
-
-  if [[ "${AGENT_TOKENS}" -gt 1000 && "$NON_INTERACTIVE" == "true" ]]; then
-    echo "ERROR: agent.md exceeds 1000-token hard cap." >&2
-    exit 4
-  fi
+  while IFS= read -r resource; do
+    [ -n "$resource" ] || continue
+    case "/$resource/" in */../*|*/./*) printf 'Unsafe package resource: %s\n' "$resource" >&2; exit 2 ;; esac
+    [ -e "$SCRIPT_DIR/$resource" ] || { printf 'Missing package resource: %s\n' "$resource" >&2; exit 2; }
+    mkdir -p "$(dirname "$TARGET/$resource")"
+    rm -rf "$TARGET/$resource"
+    cp -R "$SCRIPT_DIR/$resource" "$TARGET/$resource"
+  done < <(jq -r '.resources[]' "$PACKAGE_MANIFEST")
 fi
 
-# --- smoke test banner ---
-echo ""
-echo "Smoke test:"
-echo "  \"${METHODOLOGY}: no specialist fit — set up a reproducible test harness for module X, verifier: the project test suite exits 0. Gauge, gather, lock, grind, attest a verified result.\""
+TREE_SHA="$(tree_sha256 "$TARGET")"
+INSTALLED_AT="${PREVIOUS_INSTALLED_AT:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
+cat > "$TARGET/install.receipt.json" <<EOF
+{
+  "schema_version": "1.0",
+  "eiis_version": "3.0.0",
+  "package": {"name":"$NAME","version":"$VERSION","manifest_sha256":"$MANIFEST_SHA"},
+  "installed_at": "$INSTALLED_AT",
+  "target": "$TARGET",
+  "tree_sha256": "$TREE_SHA",
+  "adapters": []
+}
+EOF
+printf '%s@%s installed -> %s\n' "$NAME" "$VERSION" "$TARGET"

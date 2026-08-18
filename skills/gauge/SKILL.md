@@ -11,7 +11,7 @@ metadata:
 ## When to use
 
 Load during Phase G (Gauge). Runs once per mission, immediately after
-`skills/verify-incoming.md` passes. Triage cost ≈ 1 step. Do not load during
+`skills/verify-incoming/SKILL.md` passes. Triage cost ≈ 1 step. Do not load during
 Inventory, Lock, Grind, or Attest.
 
 Gauge is the additive-proof gate: Gilgamesh only spends cycles on missions it can

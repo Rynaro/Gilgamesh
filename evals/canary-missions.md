@@ -28,7 +28,7 @@ payload: |
 ```
 
 **Expected behavior:**
-1. `skills/verify-incoming.md` — envelope passes (`verify_pass`).
+1. `skills/verify-incoming/SKILL.md` — envelope passes (`verify_pass`).
 2. Phase G: mission-contract valid, no clean specialist fit, authority table
    instantiated (deploy = none, never-grantable).
 3. Phase I: atlas-aci maps `module_x/`; names the test suite as the oracle.
@@ -71,7 +71,7 @@ payload: |
 ```
 
 **Expected behavior:**
-1. `skills/verify-incoming.md` — envelope passes.
+1. `skills/verify-incoming/SKILL.md` — envelope passes.
 2. Phase G: this is a localized, verifier-backed micro-edit — a clean **Kupo** fit.
 
 **Pass criteria:**

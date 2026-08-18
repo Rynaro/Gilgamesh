@@ -92,7 +92,7 @@ source line, not its runtime output file).
 **Verify-routing ladder.** (1) If the verification command is directly allowed by
 your tool list (`make`, `bats`, `shellcheck`, `pytest`, `go test`, `jest`, `rspec`,
 `shasum`, `wc`) — run it directly. (2) Otherwise route it through the delegated
-sandbox: `eidolons sandbox run --allow-unsafe-host -- <cmd>` (see `skills/grind.md`
+sandbox: `eidolons sandbox run --allow-unsafe-host -- <cmd>` (see `skills/grind/SKILL.md`
 — externalized verification; the sandbox captures pass/fail). (3) Only if both
 rungs are unavailable, emit `VERIFY-<x>: fail` immediately followed by the
 blocker. Never skip a rung, never omit the line, never hand-derive a result you
