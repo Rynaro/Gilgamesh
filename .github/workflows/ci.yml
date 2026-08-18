@@ -34,7 +34,7 @@ jobs:
 
       - name: Clone EIIS at the pinned tag
         run: |
-          git clone --depth 1 --branch v1.4.0 \
+          git clone --depth 1 --branch v3.0.0 \
             https://github.com/Rynaro/eidolons-eiis.git /tmp/eiis || \
           git clone --depth 1 \
             https://github.com/Rynaro/eidolons-eiis.git /tmp/eiis
